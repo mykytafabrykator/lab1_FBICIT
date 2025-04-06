@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8"/>
+    <title>Додати вузол</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        label { display: block; margin: 8px 0; }
+    </style>
+</head>
+<body>
+<h1>Додати новий вузол</h1>
+
+<form method="POST" action="{{ url_for('add') }}">
+    <input type="hidden" name="parent" value="{{ parent }}">
+
+    <label>
+        Назва:
+        <input type="text" name="name" required autofocus>
+    </label>
+
+    <button type="submit">Додати</button>
+    <a href="{{ url_for('index') }}">Скасувати</a>
+</form>
+</body>
+</html>

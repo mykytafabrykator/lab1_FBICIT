@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Дерево і Таблиця</title>
+<style>
+ body{font-family:sans-serif;margin:20px}
+ .tree-node{margin-left:20px}
+ .toggle-btn{cursor:pointer;font-weight:bold;margin-right:4px}
+ .hidden{display:none}
+ .selected{background:#ffeaa7}
+ .tree-link{cursor:pointer}
+ table,th,td{border:1px solid #ccc;border-collapse:collapse;padding:4px}
+ th{background:#eee}
+</style>
+</head>
+<body>
+<h1>Дерево і Таблиця</h1>
+
+<!-- ------------------ поле "Перейти до вузла" ------------------- -->
+<form method="GET" action="{{ url_for('index') }}">
+  <label>Перейти до N / Name:
+    <input type="text" name="q" required>
+  </label>
+  <button type="submit">Go</button>
+</form>
+
+<script>
+// Перехід: шукаємо на клієнті, якщо не знайшли – відправляємо GET
+document.querySelector('form').addEventListener('submit', e=>{
+  const q = e.target.q.value.trim().toLowerCase();
+  const row = [...document.querySelectorAll('tr[data-n]')]
+              .find(r=>r.dataset.n===q || r.dataset.name===q);
+  if(row){
+    gotoNode(row.dataset.n);
+    e.preventDefault();
+  }
+});
+</script>
+
+<div style="float:left;width:46%;padding-right:2%;">
+  <h2>Дерево</h2>
+  {{ render_tree(0)|safe }}
+</div>
+
+<div style="float:left;width:50%;">
+  <h2>Таблиця</h2>
+  <table>
+    <tr>
+      <th>N</th><th>Parent</th><th>Child</th><th>Name</th><th>Дії</th>
+    </tr>
+    {% for i in items %}
+    <tr data-n="{{ i.N }}" data-name="{{ i.Name|lower }}"
+        {% if i.N==highlight %}class="selected"{% endif %}
+        onclick="gotoNode({{ i.N }})">
+      <td>{{ i.N }}</td>
+      <td>{{ i.Parent }}</td>
+      <td>{{ (items|selectattr('Parent','equalto',i.N)|list|length) }}</td>
+      <td>{{ i.Name }}</td>
+      <td>
+        <!-- rename -->
+        <form style="display:inline" method="POST" action="{{ url_for('rename') }}">
+          <input type="hidden" name="n" value="{{ i.N }}">
+          <input type="text" name="new_name" value="{{ i.Name }}" size="10">
+          <button>Rename</button>
+        </form>
+        <!-- +child -->
+        <form style="display:inline" method="GET" action="{{ url_for('add') }}">
+          <input type="hidden" name="parent" value="{{ i.N }}"><button>+Child</button>
+        </form>
+        <!-- duplicate -->
+        <form style="display:inline" method="POST" action="{{ url_for('duplicate') }}">
+          <input type="hidden" name="n" value="{{ i.N }}"><button>Duplicate</button>
+        </form>
+        <!-- move -->
+        <button onclick="moveNode({{ i.N }});event.stopPropagation()">Move</button>
+        <!-- delete -->
+        <form style="display:inline" method="POST"
+              action="{{ url_for('delete_reassign_route') }}">
+          <input type="hidden" name="n" value="{{ i.N }}"><button>Del↑</button>
+        </form>
+        <form style="display:inline" method="POST"
+              action="{{ url_for('delete_subtree_route') }}">
+          <input type="hidden" name="n" value="{{ i.N }}"><button>Del sub</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <br><a href="{{ url_for('add') }}">Додати кореневий вузол</a>
+</div>
+<div style="clear:both"></div>
+
+<script>
+function toggleNode(id){
+  const btn=document.getElementById("toggle-btn-"+id);
+  const box=document.getElementById("children-"+id);
+  if(!btn||!box) return;
+  box.classList.toggle("hidden");
+  btn.textContent=box.classList.contains("hidden")?"[+]":"[-]";
+}
+
+// підсвічування + прокрутка
+function gotoNode(n){
+  // редірект, щоб підсвітити на сервері
+  window.location = "{{ url_for('index') }}?sel="+n;
+}
+
+// move / copy
+function moveNode(n){
+  const newPar=prompt("Введіть N нового Parent (0 – корінь):");
+  if(!newPar) return;
+  fetch("{{ url_for('move') }}",{
+    method:"POST",
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:`n=${n}&new_parent=${newPar}`
+  }).then(()=>window.location='{{ url_for("index") }}?sel='+n);
+}
+</script>
+</body>
+</html>
